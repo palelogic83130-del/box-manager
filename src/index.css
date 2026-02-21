@@ -353,8 +353,43 @@ body {
     color: var(--text-secondary);
 }
 
-.add-item-form {
+.add-item-form-row {
     margin-bottom: 20px;
+}
+
+.input-with-btn {
+    display: flex;
+    gap: 10px;
+}
+
+.input-with-btn .glass-input {
+    flex: 1;
+}
+
+.detail-tabs {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.detail-tabs button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.detail-tabs button.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .item-list {
@@ -410,6 +445,19 @@ body {
 
 .close-icon-btn:hover {
     background: rgba(255, 255, 255, 0.1);
+}
+
+.danger-zone {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 100, 100, 0.2);
+}
+
+.danger-zone .hint {
+    color: #ffbaba;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    opacity: 0.8;
 }
 
 /* Standardized View Paddings */

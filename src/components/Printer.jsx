@@ -7,11 +7,14 @@ import { Button } from './ui';
 
 import { PRINTER_COLORS as COLORS, CARD_SIZES } from '../constants';
 
-const Printer = ({ boxes }) => {
+const Printer = ({ boxes, setConfirmDialog }) => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [orientation, setOrientation] = useState('landscape'); // 'landscape' or 'portrait'
     const [filterColor, setFilterColor] = useState('all');
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // Helper to close confirm dialog
+    const closeConfirm = () => setConfirmDialog && setConfirmDialog(null);
 
     const toggleSelection = (id) => {
         if (selectedIds.includes(id)) {
@@ -34,7 +37,12 @@ const Printer = ({ boxes }) => {
 
     const generatePDF = async () => {
         if (selectedIds.length === 0) {
-            alert("출력할 상자를 선택해 주세요.");
+            setConfirmDialog && setConfirmDialog({
+                title: '선택 항목 없음',
+                message: '출력할 상자를 먼저 선택해 주세요.',
+                confirmText: '확인',
+                onConfirm: closeConfirm
+            });
             return;
         }
 
@@ -52,7 +60,7 @@ const Printer = ({ boxes }) => {
             let currentY = margin;
             let countInPage = 0;
 
-            const appUrl = window.location.origin;
+            const appUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
             const printBoxes = boxes
                 .filter(b => selectedIds.includes(b.id))
                 .sort((a, b) => a.id - b.id);
@@ -155,7 +163,12 @@ const Printer = ({ boxes }) => {
             doc.save(`box_cards_${selectedIds.length}_${orientation}.pdf`);
         } catch (error) {
             console.error("PDF Generation failed:", error);
-            alert("PDF 생성 중 오류가 발생했습니다.");
+            setConfirmDialog && setConfirmDialog({
+                title: 'PDF 생성 실패',
+                message: 'PDF 생성 중 오류가 발생했습니다. 다시 시도해 주세요.',
+                confirmText: '확인',
+                onConfirm: closeConfirm
+            });
         } finally {
             setIsGenerating(false);
         }

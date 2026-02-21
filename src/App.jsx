@@ -8,7 +8,7 @@ import BoxCard from './components/BoxCard'
 import BoxDetail from './components/BoxDetail'
 import Scanner from './components/Scanner'
 import Printer from './components/Printer'
-import { Button, Input } from './components/ui'
+import { Button, Input, ConfirmModal } from './components/ui'
 import './App.css'
 
 function App() {
@@ -16,8 +16,12 @@ function App() {
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedBox, setSelectedBox] = useState(null)
     const [showScanner, setShowScanner] = useState(false)
+    const [confirmDialog, setConfirmDialog] = useState(null)
     const { boxes, isLoading, loadBoxes, addBox, removeBox, getBoxById } = useBoxes()
     const fileInputRef = useRef(null)
+
+    // Helper to close confirm dialog
+    const closeConfirm = () => setConfirmDialog(null)
 
     // Handle deep linking (e.g., ?id=1) on mount
     useEffect(() => {
@@ -35,20 +39,46 @@ function App() {
     }, [isLoading]) // Depend on isLoading to ensure data might be ready
 
     const handleSaveBox = async (box) => {
-        await addBox(box)
+        const isNew = box._isNew
+        const boxToSave = { ...box }
+        delete boxToSave._isNew // Remove internal flag
+
+        await addBox(boxToSave)
         setSelectedBox(null)
+
+        if (isNew) {
+            setConfirmDialog({
+                title: '상자 생성 완료',
+                message: `#${boxToSave.id} 상자가 성공적으로 생성되었습니다.`,
+                confirmText: '확인',
+                onConfirm: closeConfirm
+            })
+        }
     }
 
     const handleDeleteBox = async (id) => {
-        if (confirm('정말 이 상자를 삭제할까요?')) {
-            await removeBox(id)
-            setSelectedBox(null)
-        }
+        setConfirmDialog({
+            title: '상자 삭제',
+            message: `정말 #${id} 상자를 삭제할까요? 이 작업은 되돌릴 수 없습니다.`,
+            confirmText: '삭제하기',
+            danger: true,
+            onConfirm: async () => {
+                await removeBox(id)
+                setSelectedBox(null)
+                closeConfirm()
+            },
+            onCancel: closeConfirm
+        })
     }
 
     const handleAddNewBox = () => {
         const maxId = boxes.length > 0 ? Math.max(...boxes.map(b => b.id)) : 0
-        setSelectedBox({ id: maxId + 1, items: [], color: DEFAULT_BOX_COLOR })
+        setSelectedBox({
+            id: maxId + 1,
+            items: [],
+            color: DEFAULT_BOX_COLOR,
+            _isNew: true
+        })
     }
 
     const checkCameraAvailability = async () => {
@@ -65,7 +95,12 @@ function App() {
         if (hasCamera) {
             setShowScanner(true)
         } else {
-            alert('연결된 카메라를 찾을 수 없습니다. 카메라가 있는 기기에서 사용해 주세요! 📷')
+            setConfirmDialog({
+                title: '카메라 없음',
+                message: '연결된 카메라를 찾을 수 없습니다. 카메라가 있는 기기에서 사용해 주세요! 📷',
+                confirmText: '확인',
+                onConfirm: closeConfirm
+            })
         }
     }
 
@@ -75,9 +110,16 @@ function App() {
         if (box) {
             setSelectedBox(box)
         } else {
-            if (confirm(`상자 #${id} 가 없습니다. 새로 만들까요?`)) {
-                setSelectedBox({ id: parseInt(id), items: [], color: DEFAULT_BOX_COLOR })
-            }
+            setConfirmDialog({
+                title: '상자 없음',
+                message: `상자 #${id} 가 없습니다. 새로 만들까요?`,
+                confirmText: '새로 만들기',
+                onConfirm: () => {
+                    setSelectedBox({ id: parseInt(id), items: [], color: DEFAULT_BOX_COLOR, _isNew: true })
+                    closeConfirm()
+                },
+                onCancel: closeConfirm
+            })
         }
     }
 
@@ -98,10 +140,22 @@ function App() {
         reader.onload = async (event) => {
             const success = await importData(event.target.result)
             if (success) {
-                alert('데이터를 성공적으로 불러왔습니다.')
-                loadBoxes()
+                setConfirmDialog({
+                    title: '가져오기 성공',
+                    message: '데이터를 성공적으로 불러왔습니다.',
+                    confirmText: '확인',
+                    onConfirm: () => {
+                        closeConfirm()
+                        loadBoxes()
+                    }
+                })
             } else {
-                alert('데이터 불러오기에 실패했습니다.')
+                setConfirmDialog({
+                    title: '가져오기 실패',
+                    message: '데이터 불러오기에 실패했습니다. 파일 형식을 확인해 주세요.',
+                    confirmText: '확인',
+                    onConfirm: closeConfirm
+                })
             }
         }
         reader.readAsText(file)
@@ -148,7 +202,7 @@ function App() {
                     </div>
                 )}
 
-                {activeTab === 'print' && <Printer boxes={boxes} />}
+                {activeTab === 'print' && <Printer boxes={boxes} setConfirmDialog={setConfirmDialog} />}
 
                 {activeTab === 'settings' && (
                     <div className="settings-view">
@@ -173,10 +227,17 @@ function App() {
                                 />
 
                                 <Button variant="danger" className="settings-btn" onClick={() => {
-                                    if (confirm('모든 데이터를 삭제할까요?')) {
-                                        indexedDB.deleteDatabase(DB_NAME)
-                                        window.location.reload()
-                                    }
+                                    setConfirmDialog({
+                                        title: '전체 초기화',
+                                        message: '모든 데이터가 영구적으로 삭제됩니다. 정말 초기화할까요?',
+                                        confirmText: '초기화하기',
+                                        danger: true,
+                                        onConfirm: () => {
+                                            indexedDB.deleteDatabase(DB_NAME)
+                                            window.location.reload()
+                                        },
+                                        onCancel: closeConfirm
+                                    })
                                 }}>
                                     <RefreshCw size={20} /> 전체 초기화
                                 </Button>
@@ -217,6 +278,12 @@ function App() {
                     onSave={handleSaveBox}
                     onDelete={handleDeleteBox}
                     onClose={() => setSelectedBox(null)}
+                />
+            )}
+
+            {confirmDialog && (
+                <ConfirmModal
+                    {...confirmDialog}
                 />
             )}
         </div>

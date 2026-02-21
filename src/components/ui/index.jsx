@@ -42,3 +42,22 @@ export const Modal = ({ title, subtitle, children, onClose, footer }) => {
         </div>
     );
 };
+
+export const ConfirmModal = ({ title, message, onConfirm, onCancel, confirmText = '확인', cancelText = '취소', danger = false }) => {
+    return (
+        <Modal
+            title={title}
+            onClose={onCancel}
+            footer={
+                <>
+                    <Button variant="glass" onClick={onCancel}>{cancelText}</Button>
+                    <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirmText}</Button>
+                </>
+            }
+        >
+            <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+                {message}
+            </p>
+        </Modal>
+    );
+};
